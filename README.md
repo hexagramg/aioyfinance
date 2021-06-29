@@ -2,7 +2,7 @@
 
 Yahoo Finance asynchronous data downloader built with aiohttp and inspired by [yfinance](https://github.com/ranaroussi/yfinance)
 
-####Current progress:
+#### Current progress:
 - [x] timeseries getter
 - [x] statistics getter (raw names)
 - [x] profile getter
@@ -14,7 +14,7 @@ Yahoo Finance asynchronous data downloader built with aiohttp and inspired by [y
 - [ ] proxy implementation
 - [ ] easy pandas conversion
 
-###Ticker object
+### Ticker object
 ```python
 import aioyfinance as yf
 from datetime import timedelta
@@ -40,7 +40,7 @@ async def quick():
 
 Exception handling is really primitive right now. *NameError* is returned if ticker is misspelled
 
-###Tickers object
+### Tickers object
 
 ```python
 import aioyfinance as yf
