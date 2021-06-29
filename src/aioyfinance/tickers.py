@@ -8,6 +8,8 @@ from typing import AnyStr, List, Union
 from .urldict import base, funcs, query, query_opt, offsets
 from datetime import datetime, timedelta
 from functools import wraps
+from old_urls import *
+import re
 import logging
 
 
@@ -49,6 +51,13 @@ def symbol_check(func):
         return load_and_check
     return decorator
 
+def strip_old_json(fund_json):
+    inside = fund_json['timeseries']['result']
+    inside = list(filter(lambda x: 'timestamp' in x, inside))
+    parsed_dict = {}
+    for x in inside:
+        name = x['meta']['type'][0]
+
 
 class Ticker:
     def __init__(self, ticker: AnyStr):
@@ -89,15 +98,24 @@ class Ticker:
         html = await self._base_request(url)
         return html
 
-    async def _request_timeseries(self, interval='1wk', range_:Union[str, timedelta]='1y'):
-        """
+    async def _get_fundamentals(self, main_part, annual=True):
+        url = fundamentals_url + self.ticker + main_part
+        now = datetime.now()
 
-        :param interval: granularity
-        valid ranges: 1m, 5m, 30m, 1h, 1d, 1wk, 1mo
-        :param range_: whole range of dates
-        valid ranges: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y or timedelta
-        :return:
-        """
+        if annual:
+            delta = timedelta(days=5*444)
+        else:
+            delta = timedelta(days=2*444)
+
+        url += fundamental_formatter.format(period1=now-delta, period2=now, symbol=self.ticker)
+
+        fundamental_json = await self._base_request(url, is_json=True)
+
+
+
+        return fundamental_json
+
+    async def _request_timeseries(self, interval='1wk', range_:Union[str, timedelta]='1y'):
         #TODO support for second query type: param1 & param2 date segment
         #TODO find out if other parameters are actually doing anything
         now = datetime.now()
