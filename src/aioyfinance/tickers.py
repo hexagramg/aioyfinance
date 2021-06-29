@@ -64,6 +64,14 @@ class Ticker:
         return self._statistics
 
     async def get_timeseries(self, interval, range_):
+        """
+
+        :param interval: granularity
+        valid ranges: 1m, 5m, 30m, 1h, 1d, 1wk, 1mo
+        :param range_: whole range of dates
+        valid ranges: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y or timedelta
+        :return:
+        """
         if self._timeseries is None:
             await self._get_timeseries(interval, range_)
 
