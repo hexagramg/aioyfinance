@@ -42,7 +42,7 @@ setup(
 
     extras_require={  # Optional
         'dev': ['pandas'],
-        'test': ['pandas'],
+        'test': ['pandas', 'pytest'],
     },
 
     project_urls={  # Optional
