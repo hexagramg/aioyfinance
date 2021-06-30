@@ -8,11 +8,11 @@ from typing import AnyStr, List, Union
 from .urldict import base, funcs, query, query_opt, offsets
 from datetime import datetime, timedelta
 from functools import wraps
-from old_urls import *
+from .old_urls import *
 import re
 import logging
-
-
+from collections import defaultdict
+from functools import partial
 def _merge_dicts(dict_args):
     """
     Given any number of dictionaries, shallow copy and merge into a new dict,
@@ -52,11 +52,40 @@ def symbol_check(func):
     return decorator
 
 def strip_old_json(fund_json):
+    """
+    format of returned fundamentals json is not good, many elements without data
+    trying to clean things up a bit
+
+    :param fund_json: dictionary from fundamentals api
+    :return: probably cleaner dictionary
+    """
+
     inside = fund_json['timeseries']['result']
+
     inside = list(filter(lambda x: 'timestamp' in x, inside))
-    parsed_dict = {}
-    for x in inside:
-        name = x['meta']['type'][0]
+
+    parsed_dict = defaultdict(dict)
+    capital_splitter = re.compile('(?=[A-Z])')
+    for i, x in enumerate(inside):
+        full_name = x['meta']['type'][0]
+        mod, name = capital_splitter.split(full_name, 1)
+
+        values = []
+        for d in x[full_name]:
+            if d is not None: # array of values may consist of None if there is no value.
+                values.append(d['reportedValue']['raw'])
+            else:
+                values.append(d)
+
+        parsed_dict[mod][name] = {
+            'timestamp': x['timestamp'],
+            'data': values,
+            'info': [d for d in x[full_name]]
+        }
+
+    return parsed_dict
+
+
 
 
 class Ticker:
@@ -65,12 +94,79 @@ class Ticker:
         self._statistics = None
         self._profile = None
         self._timeseries = None
+        self._income = None
+        self._balance = None
+        self._cashflow = None
+
+        self._income_quarterly = None
+        self._balance_quarterly = None
+        self._cashflow_quarterly = None
 
     async def get_statistics(self):
         if self._statistics is None:
             await self._get_statistics()
 
         return self._statistics
+
+    async def get_cashflow (self, annual=True):
+        """
+        gets cash  flow or quarterly income
+        :param annual: True if Annual, False if Quraterly
+        :return: stripped dictionary
+        """
+        if annual:
+            if self._cashflow is not None:
+                return self._cashflow
+            else:
+                main = cash_flow_annual
+        else:
+            if self._cashflow_quarterly is not None:
+                return self._cashflow_quarterly
+            else:
+                main = cash_flow_quarter
+
+        data = await self._get_fundamentals(main, annual=annual)
+        return strip_old_json(data)
+
+    async def get_balance (self, annual=True):
+        """
+        gets balance or quarterly income
+        :param annual: True if Annual, False if Quraterly
+        :return: stripped dictionary
+        """
+        if annual:
+            if self._balance is not None:
+                return self._balance
+            else:
+                main = balance_annual
+        else:
+            if self._balance_quarterly is not None:
+                return self._balance_quarterly
+            else:
+                main = balance_quarter
+
+        data = await self._get_fundamentals(main, annual=annual)
+        return strip_old_json(data)
+
+    async def get_income(self, annual=True):
+        """
+        gets income or quarterly income
+        :param annual: True if Annual, False if Quraterly
+        :return: stripped dictionary
+        """
+        if annual:
+            if self._income is not None:
+                return self._income
+            else:
+                main = income_statement_annual
+        else:
+            if self._income_quarterly is not None:
+                return self._income_quarterly
+            else:
+                main = income_statement_quarter
+
+        data = await self._get_fundamentals(main, annual=annual)
+        return strip_old_json(data)
 
     async def get_timeseries(self, interval, range_):
         """
@@ -107,7 +203,7 @@ class Ticker:
         else:
             delta = timedelta(days=2*444)
 
-        url += fundamental_formatter.format(period1=now-delta, period2=now, symbol=self.ticker)
+        url += fundamental_formatter.format(period1=round((now-delta).timestamp()), period2=round(now.timestamp()), symbol=self.ticker)
 
         fundamental_json = await self._base_request(url, is_json=True)
 
