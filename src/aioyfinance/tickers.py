@@ -222,24 +222,25 @@ class Ticker:
 
         url = f'{query}/{self.ticker}?symbol={self.ticker}&{query_opt}&interval={interval}&period1={int(param1.timestamp())}&period2={int(now.timestamp())}&events=div|split|earn&useYfid=true&includePrePost=true'
         ts_json = await self._base_request(url, is_json=True)
-        logging.critical(url)
+        logging.debug(url)
         return ts_json
 
 
     @staticmethod
     async def _base_request(url, is_json=False):
+        #TODO need to make retries
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
                 try:
                     if not is_json:
                         ress = await resp.text()
-                        html = ress
+                        result = ress
                     else:
-                        html = await resp.json()
+                        result = await resp.json()
                 except aioweb.HTTPError:
                     return None
                 else:
-                    return html
+                    return result
 
     @symbol_check(funcs['statistics'])
     async def _get_statistics(self, souped):
@@ -249,7 +250,6 @@ class Ticker:
 
     async def _get_timeseries(self, interval, range_:Union[str, timedelta]):
         """
-
         :param interval: granularity
         valid ranges: 1m, 5m, 30m, 1h, 1d, 1wk, 1mo
         :param range_: whole range of dates
@@ -317,6 +317,18 @@ class Tickers:
 
     async def get_timeseries(self, interval, range_):
         coro_arr = [tick.get_timeseries(interval, range_) for tick in self._tickers]
+        return await self._get_tasks(coro_arr)
+
+    async def get_cashflow(self, annual=True):
+        coro_arr = [tick.get_cashflow(annual=annual) for tick in self._tickers]
+        return await self._get_tasks(coro_arr)
+
+    async def get_balance(self, annual=True):
+        coro_arr = [tick.get_balance(annual=annual) for tick in self._tickers]
+        return await self._get_tasks(coro_arr)
+
+    async def get_income(self, annual=True):
+        coro_arr = [tick.get_balance(annual=annual) for tick in self._tickers]
         return await self._get_tasks(coro_arr)
 
     async def _get_tasks(self, coroutine_array):

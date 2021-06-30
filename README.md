@@ -7,7 +7,7 @@ Yahoo Finance asynchronous data downloader built with aiohttp and inspired by [y
 - [x] statistics getter (raw names)
 - [x] profile getter
 - [x] multiple tickers simultaneously 
-- [ ] parsing different financials (income statement, balance sheet, cash flow)
+- [ ] parsing different financials (income statement, balance sheet, cash flow) [partial support] 
 - [ ] parsing analysis and holders
 - [ ] ETF support  
 - [ ] global settings
@@ -24,9 +24,7 @@ async def quick():
     
     #getting raw timeseries
     timeseries = await nvda.get_timeseries('1wk', '2y')
-    
     #or you can do
-    
     delta = timedelta(hours=2)
     timeseries = await nvda.get_timeseries('5m', delta)
     
@@ -35,6 +33,12 @@ async def quick():
     
     #getting profile
     profile = await nvda.get_profile()
+    
+    #fundamentals methods
+    #False if quarterly
+    balance_sheet_quarterly = await nvda.get_balance(annual=False) 
+    cash_flow = await nvda.get_cashflow()
+    income = await nvda.get_income()
 
 ```
 
