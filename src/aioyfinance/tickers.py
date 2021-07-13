@@ -13,6 +13,9 @@ import re
 import logging
 from collections import defaultdict
 from functools import partial
+
+from .base_requests import BaseRequest
+
 def _merge_dicts(dict_args):
     """
     Given any number of dictionaries, shallow copy and merge into a new dict,
@@ -229,7 +232,9 @@ class Ticker:
     @staticmethod
     async def _base_request(url, is_json=False):
         #TODO need to make retries
-        async with aiohttp.ClientSession() as session:
+        return await BaseRequest.get(url, is_json)
+
+        """async with aiohttp.ClientSession() as session:
             async with session.get(url) as resp:
                 try:
                     if not is_json:
@@ -240,7 +245,7 @@ class Ticker:
                 except aioweb.HTTPError:
                     return None
                 else:
-                    return result
+                    return result"""
 
     @symbol_check(funcs['statistics'])
     async def _get_statistics(self, souped):

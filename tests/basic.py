@@ -31,13 +31,13 @@ class MyTestCase(unittest.TestCase):
         self.assertNotIn(False, fails)
 
     def test_mult_wrong(self):
-        wrong_tickers = ['amd', 'lalaboba', 'nvda']
+        wrong_tickers = ['amd', 'lalaboba', 'nvda', 'fb', 'goog', 'tsla', 'v', 'bac']
         tickers = yf.Tickers(wrong_tickers)
 
 
         right, wrong = loop.run_until_complete(tickers.get_statistics())
 
-        self.assertEqual(len(right), 2)
+        self.assertEqual(len(right), 7)
         self.assertEqual(len(wrong), 1)
 
     def test_fund_strip(self):
