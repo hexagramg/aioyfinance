@@ -8,21 +8,44 @@ loop = asy.get_event_loop()
 
 class MyTestCase(unittest.TestCase):
 
+    def test_right(self):
+        right_ticker = 'nvda'
+        ticker = yf.Ticker(right_ticker)
+
+        fails = []
+        data = []
+        def try_block(callable):
+            nonlocal fails
+
+            try:
+                d = loop.run_until_complete(callable)
+            except Exception as e:
+                fails.append(False)
+            else:
+                fails.append(True)
+                data.append(d)
+
+        try_block(ticker.get_timeseries('1d', '1mo'))
+        try_block(ticker.get_statistics())
+        try_block(ticker.get_profile())
+
+        self.assertNotIn(False, fails)
     def test_wrong(self):
         wrong_ticker = 'lalaboba'
         ticker = yf.Ticker(wrong_ticker)
 
         fails = []
-
+        data = []
         def try_block(callable):
             nonlocal fails
 
             try:
-                loop.run_until_complete(callable)
-            except NameError as e:
+                d = loop.run_until_complete(callable)
+            except Exception as e:
                 fails.append(True)
             else:
                 fails.append(False)
+                data.append(d)
 
         try_block(ticker.get_timeseries('1d', '1mo'))
         try_block(ticker.get_statistics())

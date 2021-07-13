@@ -4,7 +4,6 @@ import aiohttp
 import aiohttp.web as aioweb
 from asyncio import Semaphore, Lock
 import enum
-from functools import partial
 from random import uniform
 import logging
 
@@ -45,14 +44,9 @@ class BaseRequest:
         await asyncio.sleep(rand)
         async with aiohttp.ClientSession() as session:
 
-            if PROXY_URL is None:
-                getter = partial(session.get, url)
-            else:
-                getter = partial(session.get, url, proxy=PROXY_URL)
-
             retries = MAX_RETRIES
             while retries or no_retries: #if retries > 0
-                async with getter() as resp:
+                async with session.get(url, proxy=PROXY_URL) as resp:
                     try:
                         if not is_json:
                             result = await resp.text()
@@ -65,7 +59,7 @@ class BaseRequest:
                         if retries: #if > 0
                             await asyncio.sleep(RETRY_DELAY)
                         else:
-                            result = None
+                            result = e
                     else:
                         break
 
@@ -74,6 +68,10 @@ class BaseRequest:
                 lock_.release()
 
             await asyncio.sleep(0) #next code is computational, let other requests finish
+
+            if isinstance(result, Exception): #ensure that everything is released, then raise
+                raise result
+
             return result
 
 

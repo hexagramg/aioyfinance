@@ -1,7 +1,5 @@
 
-import aiohttp
 import asyncio
-import aiohttp.web as aioweb
 from bs4 import BeautifulSoup
 import json
 from typing import AnyStr, List, Union
@@ -12,9 +10,10 @@ from .old_urls import *
 import re
 import logging
 from collections import defaultdict
-from functools import partial
 
 from .base_requests import BaseRequest
+
+HANDLE_EXCEPTIONS = True #you can either let library throw errors in data list or separate them
 
 def _merge_dicts(dict_args):
     """
@@ -231,21 +230,7 @@ class Ticker:
 
     @staticmethod
     async def _base_request(url, is_json=False):
-        #TODO need to make retries
         return await BaseRequest.get(url, is_json)
-
-        """async with aiohttp.ClientSession() as session:
-            async with session.get(url) as resp:
-                try:
-                    if not is_json:
-                        ress = await resp.text()
-                        result = ress
-                    else:
-                        result = await resp.json()
-                except aioweb.HTTPError:
-                    return None
-                else:
-                    return result"""
 
     @symbol_check(funcs['statistics'])
     async def _get_statistics(self, souped):
@@ -275,7 +260,7 @@ class Ticker:
                 if 'splits' in events:
                     reform_ts['splits'] = events['splits']
             data_ts = base_ts['indicators']
-            reform_ts = _merge_dicts(reform_ts, data_ts['quote'][0], data_ts['adjclose'][0])
+            reform_ts = _merge_dicts([reform_ts, data_ts['quote'][0], data_ts['adjclose'][0]])
             self._timeseries = reform_ts
 
     @symbol_check(funcs['profile'])
@@ -341,20 +326,23 @@ class Tickers:
         hopefully universal function. For it to work
         every async function in Task must raise NameError if anything goes wrong
         :param coroutine_array:
-        :return: array of completed data and array of misspeled quote
+        :return: array of completed data and array of quotes that catched exceptions
         """
         completed = await asyncio.gather(*coroutine_array, return_exceptions=True)
-        wrong_indexes = []
-        wrong_names = []
-        for i, value in enumerate(completed):
-            if isinstance(value, NameError):
-                wrong_indexes.append(i)
-                wrong_names.append(self._tickers_names[i])
-        for ind in sorted(wrong_indexes, reverse=True):
-            del self._tickers_names[ind]
-            del self._tickers[ind]
-            del completed[ind]
+        if HANDLE_EXCEPTIONS:
+            wrong_indexes = []
+            excepted_tickers = []
+            for i, value in enumerate(completed):
+                if isinstance(value, Exception):
+                    wrong_indexes.append(i)
+                    excepted_tickers.append(self._tickers_names[i])
+            for ind in sorted(wrong_indexes, reverse=True):
+                del self._tickers_names[ind]
+                del self._tickers[ind]
+                del completed[ind]
 
-        return completed, wrong_names
+            return completed, excepted_tickers
+        else:
+            return completed
 
 
