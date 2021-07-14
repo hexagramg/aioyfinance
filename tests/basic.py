@@ -83,5 +83,16 @@ class MyTestCase(unittest.TestCase):
         self.assertIsNotNone(data)
         self.assertIsNotNone(data_quarterly)
 
+    def test_gettitem(self):
+        names = ['aapl', 'goog', 'msft', 'v']
+        tickers = yf.Tickers(names)
+        ticker = tickers['goog']
+        data = loop.run_until_complete(ticker.get_income())
+        data_ = loop.run_until_complete(tickers.get_income())
+
+        self.assertIsNotNone(data)
+        self.assertIsNotNone(data_)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -10,6 +10,7 @@ import logging
 from collections import defaultdict
 from typing import Callable, List, Dict, Union, AnyStr, Tuple, Coroutine
 
+
 from .base_requests import BaseRequest
 
 HANDLE_EXCEPTIONS = True  # you can either let library throw errors in data list or separate them
@@ -304,7 +305,17 @@ class Tickers:
 
     def __init__(self, tickers: List[str]):
         self._tickers_names = tickers
+        self.order_hash = {
+            x: i for i, x in enumerate(self._tickers_names)
+        }
         self._tickers: List[Ticker] = [Ticker(ticker) for ticker in tickers]
+
+    def __getitem__(self, ticker: AnyStr):
+        try:
+            index = self.order_hash[ticker]
+            return self._tickers[index]
+        except KeyError as e:
+            raise KeyError(f'no such {ticker}')
 
     async def _base_get(self, func: AnyStr, *args, **kwargs):
         coro_arr = [getattr(tick, func)(*args, **kwargs) for tick in self._tickers]
