@@ -1,8 +1,6 @@
-
 import asyncio
 from bs4 import BeautifulSoup
 import json
-from typing import AnyStr, List, Union
 from .urldict import base, funcs, query, query_opt, offsets
 from datetime import datetime, timedelta
 from functools import wraps
@@ -10,10 +8,12 @@ from .old_urls import *
 import re
 import logging
 from collections import defaultdict
+from typing import Callable, List, Dict, Union, AnyStr, Tuple, Coroutine
 
 from .base_requests import BaseRequest
 
-HANDLE_EXCEPTIONS = True #you can either let library throw errors in data list or separate them
+HANDLE_EXCEPTIONS = True  # you can either let library throw errors in data list or separate them
+
 
 def _merge_dicts(dict_args):
     """
@@ -25,6 +25,7 @@ def _merge_dicts(dict_args):
         result.update(dictionary)
     return result
 
+
 def symbol_check(func):
     """
     does request and checkes if symbol is correct, if it is not raises NameError
@@ -33,6 +34,7 @@ def symbol_check(func):
     :param func: item from funcs dictionary
     :return: async method
     """
+
     def decorator(method):
 
         @wraps(method)
@@ -50,8 +52,11 @@ def symbol_check(func):
                     raise NameError
 
             return await method(self, *args, souped=souped, **kwargs)
+
         return load_and_check
+
     return decorator
+
 
 def strip_old_json(fund_json):
     """
@@ -74,7 +79,7 @@ def strip_old_json(fund_json):
 
         values = []
         for d in x[full_name]:
-            if d is not None: # array of values may consist of None if there is no value.
+            if d is not None:  # array of values may consist of None if there is no value.
                 values.append(d['reportedValue']['raw'])
             else:
                 values.append(d)
@@ -86,8 +91,6 @@ def strip_old_json(fund_json):
         }
 
     return parsed_dict
-
-
 
 
 class Ticker:
@@ -110,7 +113,7 @@ class Ticker:
 
         return self._statistics
 
-    async def get_cashflow (self, annual=True):
+    async def get_cashflow(self, annual=True):
         """
         gets cash  flow or quarterly income
         :param annual: True if Annual, False if Quraterly
@@ -130,7 +133,7 @@ class Ticker:
         data = await self._get_fundamentals(main, annual=annual)
         return strip_old_json(data)
 
-    async def get_balance (self, annual=True):
+    async def get_balance(self, annual=True):
         """
         gets balance or quarterly income
         :param annual: True if Annual, False if Quraterly
@@ -201,21 +204,20 @@ class Ticker:
         now = datetime.now()
 
         if annual:
-            delta = timedelta(days=5*444)
+            delta = timedelta(days=5 * 444)
         else:
-            delta = timedelta(days=2*444)
+            delta = timedelta(days=2 * 444)
 
-        url += fundamental_formatter.format(period1=round((now-delta).timestamp()), period2=round(now.timestamp()), symbol=self.ticker)
+        url += fundamental_formatter.format(period1=round((now - delta).timestamp()), period2=round(now.timestamp()),
+                                            symbol=self.ticker)
 
         fundamental_json = await self._base_request(url, is_json=True)
 
-
-
         return fundamental_json
 
-    async def _request_timeseries(self, interval='1wk', range_:Union[str, timedelta]='1y'):
-        #TODO support for second query type: param1 & param2 date segment
-        #TODO find out if other parameters are actually doing anything
+    async def _request_timeseries(self, interval='1wk', range_: Union[str, timedelta] = '1y'):
+        # TODO support for second query type: param1 & param2 date segment
+        # TODO find out if other parameters are actually doing anything
         now = datetime.now()
         if isinstance(range_, str):
             param1 = now - offsets[range_]
@@ -227,18 +229,23 @@ class Ticker:
         logging.debug(url)
         return ts_json
 
-
     @staticmethod
     async def _base_request(url, is_json=False):
         return await BaseRequest.get(url, is_json)
 
     @symbol_check(funcs['statistics'])
     async def _get_statistics(self, souped):
-
+        """
+        mrq = Most Recent Quarter
+        ttm = Trailing Twelve Months
+        yoy = Year Over Year
+        lfy = Last Fiscal Year
+        fye = Fiscal Year Ending
+        """
         tables = souped.find_all('section')[1].find_all('tbody')
-        self._statistics = _merge_dicts([self._parse_table(tb)for tb in tables])
+        self._statistics = _merge_dicts([self._parse_table(tb) for tb in tables])
 
-    async def _get_timeseries(self, interval, range_:Union[str, timedelta]):
+    async def _get_timeseries(self, interval, range_: Union[str, timedelta]):
         """
         :param interval: granularity
         valid ranges: 1m, 5m, 30m, 1h, 1d, 1wk, 1mo
@@ -286,7 +293,9 @@ class Ticker:
 
     @staticmethod
     def _replace_keys(key: str):
-        key = key.replace(' ', '')
+        last_numbers = re.compile(r'((?!\d+$)(?:\S+)|^\d+$)') #search for all non whitespace characters
+        # that are not numbers at the end of the string
+        key = ''.join(last_numbers.findall(key))
 
         return key
 
@@ -295,38 +304,38 @@ class Tickers:
 
     def __init__(self, tickers: List[str]):
         self._tickers_names = tickers
-        self._tickers = [Ticker(ticker) for ticker in tickers]
+        self._tickers: List[Ticker] = [Ticker(ticker) for ticker in tickers]
+
+    async def _base_get(self, func: AnyStr, *args, **kwargs):
+        coro_arr = [getattr(tick, func)(*args, **kwargs) for tick in self._tickers]
+        return await self._get_tasks(coro_arr)
 
     async def get_profiles(self):
-        coro_arr = [tick.get_profile() for tick in self._tickers]
-        return await self._get_tasks(coro_arr)
+        return await self._base_get('get_profile')
 
     async def get_statistics(self):
-        coro_arr = [tick.get_statistics() for tick in self._tickers]
-        return await self._get_tasks(coro_arr)
+        return await self._base_get('get_statistics')
 
     async def get_timeseries(self, interval, range_):
-        coro_arr = [tick.get_timeseries(interval, range_) for tick in self._tickers]
-        return await self._get_tasks(coro_arr)
+        return await self._base_get('get_timeseries', interval, range_)
 
     async def get_cashflow(self, annual=True):
-        coro_arr = [tick.get_cashflow(annual=annual) for tick in self._tickers]
-        return await self._get_tasks(coro_arr)
+        return await self._base_get('get_cashflow', annual)
 
     async def get_balance(self, annual=True):
-        coro_arr = [tick.get_balance(annual=annual) for tick in self._tickers]
-        return await self._get_tasks(coro_arr)
+        return await self._base_get('get_balance', annual)
 
     async def get_income(self, annual=True):
-        coro_arr = [tick.get_balance(annual=annual) for tick in self._tickers]
-        return await self._get_tasks(coro_arr)
+        return await self._base_get('get_income', annual)
 
-    async def _get_tasks(self, coroutine_array):
+    async def _get_tasks(self, coroutine_array: List[Coroutine]) -> Union[Tuple[List[Dict], List[AnyStr]], \
+                                                                          List[Union[Dict, BaseException]]]:
         """
         hopefully universal function. For it to work
         every async function in Task must raise NameError if anything goes wrong
         :param coroutine_array:
-        :return: array of completed data and array of quotes that catched exceptions
+        :return: array of completed data and array of quotes that catched exceptions or
+        array of data and exceptions mixed. See HANDLE_EXCEPTIONS variable
         """
         completed = await asyncio.gather(*coroutine_array, return_exceptions=True)
         if HANDLE_EXCEPTIONS:
@@ -344,5 +353,3 @@ class Tickers:
             return completed, excepted_tickers
         else:
             return completed
-
-

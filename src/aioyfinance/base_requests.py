@@ -14,7 +14,7 @@ if not PARALLEL:
 else:
     lock_ = None
 
-MAX_BATCH = 5 #maximum requests active
+MAX_BATCH = 10 #maximum requests active
 semaphore_batch = Semaphore(MAX_BATCH)
 
 PROXY_URL = None #set this parameter according to aiohttp documentation
@@ -27,8 +27,8 @@ else:
 
 RETRY_DELAY = 1
 
-MAX_RAND_DELAY = 0.5
-MIN_RAND_DELAY = 0.1
+MAX_RAND_DELAY = 0.02
+MIN_RAND_DELAY = 0.01
 
 
 
@@ -42,6 +42,7 @@ class BaseRequest:
 
         rand = uniform(MIN_RAND_DELAY, MAX_RAND_DELAY)
         await asyncio.sleep(rand)
+
         async with aiohttp.ClientSession() as session:
 
             retries = MAX_RETRIES
