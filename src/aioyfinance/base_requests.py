@@ -32,7 +32,6 @@ MAX_RAND_DELAY = 0.02
 MIN_RAND_DELAY = 0.01
 
 
-
 class BaseRequest:
     @staticmethod
     async def get(url: AnyStr, is_json=False) -> Union[Dict, AnyStr]:

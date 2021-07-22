@@ -93,6 +93,13 @@ class MyTestCase(unittest.TestCase):
         self.assertIsNotNone(data)
         self.assertIsNotNone(data_)
 
+    def test_ETF(self):
+        ticker = yf.Ticker('SPY')
+        data = loop.run_until_complete(ticker.get_timeseries('1d', '1mo'))
+        with self.assertRaises(NameError):
+            loop.run_until_complete(ticker.get_statistics())
+
+        self.assertIsNotNone(data)
 
 if __name__ == '__main__':
     unittest.main()

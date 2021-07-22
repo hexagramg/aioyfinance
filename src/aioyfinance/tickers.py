@@ -62,6 +62,9 @@ def symbol_check(func):
 
             souped = BeautifulSoup(html)
 
+            if souped.h2 is None:
+                raise NameError(f'{self.ticker} is ETF probably')
+
             if (tag := souped.h2.span) is not None:
                 # ON THIS TIME THERE IS NO SUCH ELEMENT WHEN QUOTE IS FOUND.
                 if 'Symbols similar' in tag.text:
@@ -111,14 +114,12 @@ def strip_old_json(fund_json):
 
 class Ticker:
     def __init__(self, ticker: AnyStr):
-        self.ticker = ticker
+        self.__ticker = ticker
         self.__data = dict()
 
-    async def get_statistics(self):
-        if Stats.STATISTICS not in self.__data:
-            await self._get_statistics()
-
-        return self.__data[Stats.STATISTICS]
+    @property
+    def ticker(self):
+        return self.__ticker
 
     def clear(self, key_arr: List[AnyStr] = None):
         """
@@ -131,6 +132,24 @@ class Ticker:
                     del self.__data[key]
         else:
             self.__data = dict()
+
+    async def get_statistics(self):
+        if Stats.STATISTICS not in self.__data:
+            await self._get_statistics()
+
+        return self.__data[Stats.STATISTICS]
+
+    @symbol_check(funcs['statistics'])
+    async def _get_statistics(self, souped):
+        """
+        mrq = Most Recent Quarter
+        ttm = Trailing Twelve Months
+        yoy = Year Over Year
+        lfy = Last Fiscal Year
+        fye = Fiscal Year Ending
+        """
+        tables = souped.find_all('section')[1].find_all('tbody')
+        self.__data[Stats.STATISTICS] = _merge_dicts([self._parse_table(tb) for tb in tables])
 
     async def get_cashflow(self, annual=True):
         """
@@ -189,6 +208,22 @@ class Ticker:
         self.__data[key] = strip_old_json(data)
         return self.__data[key]
 
+    async def _get_fundamentals(self, main_part, annual=True) -> Dict:
+        url = fundamentals_url + self.__ticker + main_part
+        now = datetime.now()
+
+        if annual:
+            delta = timedelta(days=5 * 444)
+        else:
+            delta = timedelta(days=2 * 444)
+
+        url += fundamental_formatter.format(period1=round((now - delta).timestamp()), period2=round(now.timestamp()),
+                                            symbol=self.__ticker)
+
+        fundamental_json = await self._base_request(url, is_json=True)
+
+        return fundamental_json
+
     async def get_timeseries(self, interval, range_) -> Dict:
         """
 
@@ -202,64 +237,6 @@ class Ticker:
             await self._get_timeseries(interval, range_)
 
         return self.__data[Stats.TIME_SERIES]
-
-    async def get_profile(self) -> Dict:
-
-        if Stats.PROFILE not in self.__data:
-            await self._get_profile()
-
-        return self.__data[Stats.PROFILE]
-
-    async def _make_request(self, func) -> AnyStr:
-        url = f'{base}/{self.ticker}/{func}'
-        html = await self._base_request(url)
-        return html
-
-    async def _get_fundamentals(self, main_part, annual=True) -> Dict:
-        url = fundamentals_url + self.ticker + main_part
-        now = datetime.now()
-
-        if annual:
-            delta = timedelta(days=5 * 444)
-        else:
-            delta = timedelta(days=2 * 444)
-
-        url += fundamental_formatter.format(period1=round((now - delta).timestamp()), period2=round(now.timestamp()),
-                                            symbol=self.ticker)
-
-        fundamental_json = await self._base_request(url, is_json=True)
-
-        return fundamental_json
-
-    async def _request_timeseries(self, interval='1wk', range_: Union[str, timedelta] = '1y') -> Dict:
-        # TODO support for second query type: param1 & param2 date segment
-        # TODO find out if other parameters are actually doing anything
-        now = datetime.now()
-        if isinstance(range_, str):
-            param1 = now - offsets[range_]
-        else:
-            param1 = now - range_
-
-        url = f'{query}/{self.ticker}?symbol={self.ticker}&{query_opt}&interval={interval}&period1={int(param1.timestamp())}&period2={int(now.timestamp())}&events=div|split|earn&useYfid=true&includePrePost=true'
-        ts_json = await self._base_request(url, is_json=True)
-        logging.debug(url)
-        return ts_json
-
-    @staticmethod
-    async def _base_request(url, is_json=False) -> Union[AnyStr, Dict]:
-        return await BaseRequest.get(url, is_json)
-
-    @symbol_check(funcs['statistics'])
-    async def _get_statistics(self, souped):
-        """
-        mrq = Most Recent Quarter
-        ttm = Trailing Twelve Months
-        yoy = Year Over Year
-        lfy = Last Fiscal Year
-        fye = Fiscal Year Ending
-        """
-        tables = souped.find_all('section')[1].find_all('tbody')
-        self.__data[Stats.STATISTICS] = _merge_dicts([self._parse_table(tb) for tb in tables])
 
     async def _get_timeseries(self, interval, range_: Union[str, timedelta]):
         """
@@ -286,6 +263,27 @@ class Ticker:
             reform_ts = _merge_dicts([reform_ts, data_ts['quote'][0], data_ts['adjclose'][0]])
             self.__data[Stats.TIME_SERIES] = reform_ts
 
+    async def _request_timeseries(self, interval='1wk', range_: Union[str, timedelta] = '1y') -> Dict:
+        # TODO support for second query type: param1 & param2 date segment
+        # TODO find out if other parameters are actually doing anything
+        now = datetime.now()
+        if isinstance(range_, str):
+            param1 = now - offsets[range_]
+        else:
+            param1 = now - range_
+
+        url = f'{query}/{self.__ticker}?symbol={self.__ticker}&{query_opt}&interval={interval}&period1={int(param1.timestamp())}&period2={int(now.timestamp())}&events=div|split|earn&useYfid=true&includePrePost=true'
+        ts_json = await self._base_request(url, is_json=True)
+        logging.debug(url)
+        return ts_json
+
+    async def get_profile(self) -> Dict:
+
+        if Stats.PROFILE not in self.__data:
+            await self._get_profile()
+
+        return self.__data[Stats.PROFILE]
+
     @symbol_check(funcs['profile'])
     async def _get_profile(self, *, souped):
 
@@ -297,6 +295,15 @@ class Ticker:
             'Industry': data[3].text,
             'Name': name
         }
+
+    async def _make_request(self, func) -> AnyStr:
+        url = f'{base}/{self.__ticker}/{func}'
+        html = await self._base_request(url)
+        return html
+
+    @staticmethod
+    async def _base_request(url, is_json=False) -> Union[AnyStr, Dict]:
+        return await BaseRequest.get(url, is_json)
 
     def _parse_table(self, table) -> Dict:
         """
@@ -311,7 +318,7 @@ class Ticker:
         return dict_table
 
     @staticmethod
-    def _replace_keys(key: str):
+    def _replace_keys(key: AnyStr) -> AnyStr:
         """
         cleaning table keys from unnecessary symbols, such as:
         1) numbers at the end of the string
@@ -322,8 +329,9 @@ class Ticker:
         #  that are not numbers at the end of the string
 
         key = ''.join(last_numbers.findall(key))
+        #  exclude dates in brackets, only dates have comas in them
         if ',' in key:
-            key = key.split('(')[0] + key.split(')')[1]
+            key = key.split('(')[0]  # include everything before opening bracket
 
         return key
 
@@ -344,13 +352,13 @@ class Tickers:
         except KeyError as e:
             raise KeyError(f'no such {ticker}')
 
-    async def _base_get(self, func: AnyStr, *args, **kwargs):
+    async def clear(self, key_arr: List[AnyStr] = None):
         """
-        call method without reusing code for each one
-        :param func: method name
+        clearing data dictionary inside every __ticker
+        :param key_arr: array of keys to clean, if None clean every key
         """
-        coro_arr = [getattr(tick, func)(*args, **kwargs) for tick in self._tickers]
-        return await self._get_tasks(coro_arr)
+        for tick in self._tickers:
+            tick.clear(key_arr)
 
     async def get_profiles(self):
         return await self._base_get('get_profile')
@@ -370,13 +378,13 @@ class Tickers:
     async def get_income(self, annual=True):
         return await self._base_get('get_income', annual)
 
-    async def clear(self, key_arr: List[AnyStr] = None):
+    async def _base_get(self, func: AnyStr, *args, **kwargs):
         """
-        clearing data dictionary inside every ticker
-        :param key_arr: array of keys to clean, if None clean every key
+        call method without reusing code for each one
+        :param func: method name
         """
-        for tick in self._tickers:
-            tick.clear(key_arr)
+        coro_arr = [getattr(tick, func)(*args, **kwargs) for tick in self._tickers]
+        return await self._get_tasks(coro_arr)
 
     async def _get_tasks(self, coroutine_array: List[Coroutine]) -> Union[Tuple[List[Dict], List[AnyStr]],
                                                                           List[Union[Dict, BaseException]]]:

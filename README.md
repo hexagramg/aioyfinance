@@ -7,10 +7,10 @@ Yahoo Finance asynchronous data downloader built with aiohttp and inspired by [y
 - [x] statistics getter (raw names)
 - [x] profile getter
 - [x] multiple tickers simultaneously 
-- [ ] parsing different financials (income statement, balance sheet, cash flow) [partial support] 
+- [x] parsing different financials (income statement, balance sheet, cash flow) 
 - [ ] parsing analysis and holders
-- [ ] ETF support  
-- [ ] global settings
+- [ ] ETF support (You can get timeseries, other methods will raise exceptions)
+- [x] global settings
 - [x] proxy implementation
 - [ ] easy pandas conversion
 
@@ -22,20 +22,20 @@ from datetime import timedelta
 async def quick():
     nvda = yf.Ticker('nvda')
     
-    #getting raw timeseries
+    # getting raw timeseries
     timeseries = await nvda.get_timeseries('1wk', '2y')
-    #or you can do
+    # or you can do
     delta = timedelta(hours=2)
     timeseries = await nvda.get_timeseries('5m', delta)
     
-    #getting statistics
+    # getting statistics
     stats = await nvda.get_statistics()
     
-    #getting profile
+    # getting profile
     profile = await nvda.get_profile()
     
-    #fundamentals methods
-    #False if quarterly
+    # fundamentals methods
+    # annual=False if quarterly
     balance_sheet_quarterly = await nvda.get_balance(annual=False) 
     cash_flow = await nvda.get_cashflow()
     income = await nvda.get_income()
@@ -55,11 +55,15 @@ async def quick():
     
     tickers = yf.Tickers(tickers_names)
     
-    #doing any task will return 2 values, list of results
-    #and list of tickers that catched exceptions
+    # doing any task will return 2 values,
+    # list of results and list of tickers that catched exceptions
+    # unless variable HANDLE_EXCEPTION is set to False
     ts, excepted = await tickers.get_timeseries('1d', '6mo')
     data, _ = await tickers.get_statistics()
     data, _ = await tickers.get_profiles()
+    data, _ = await tickers.get_income(annual=False)
+    # for every method in Ticker there is a caller in Tickers
+    
 ```
 
 There is a way to configure some requests handling parameters
@@ -80,9 +84,9 @@ async def params():
     yf.MIN_RAND_DELAY = 0.1
 
     yf.HANDLE_EXCEPTIONS = True 
-    #Setting this variable to False alters tickers return argument. Only list of results is returned
-    #With exceptions untouched
-    
+    # Setting this variable to False alters tickers return variable.
+    # List of results with exceptions is returned instead of tuple[Results, WrongTickers]
+    yf.HANDLE_EXCEPTIONS = False
     tickers = yf.Tickers(['aapl', 'wrong'])
     data_with_exceptions = await tickers.get_statistics()
 
