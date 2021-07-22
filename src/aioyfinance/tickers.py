@@ -272,7 +272,9 @@ class Ticker:
         else:
             param1 = now - range_
 
-        url = f'{query}/{self.__ticker}?symbol={self.__ticker}&{query_opt}&interval={interval}&period1={int(param1.timestamp())}&period2={int(now.timestamp())}&events=div|split|earn&useYfid=true&includePrePost=true'
+        url = f'{query}/{self.__ticker}?symbol={self.__ticker}&{query_opt}&interval={interval}&period1=' \
+              f'{int(param1.timestamp())}&period2={int(now.timestamp())}' \
+              f'&events=div|split|earn&useYfid=true&includePrePost=true'
         ts_json = await self._base_request(url, is_json=True)
         logging.debug(url)
         return ts_json
@@ -349,7 +351,7 @@ class Tickers:
         try:
             index = self.order_hash[ticker]
             return self._tickers[index]
-        except KeyError as e:
+        except KeyError:
             raise KeyError(f'no such {ticker}')
 
     async def clear(self, key_arr: List[AnyStr] = None):
