@@ -6,6 +6,7 @@ from asyncio import Semaphore, Lock
 import enum
 from random import uniform
 import logging
+from typing import Union, Dict, AnyStr
 
 PARALLEL = True #Allow overlapping of requests
 
@@ -34,7 +35,7 @@ MIN_RAND_DELAY = 0.01
 
 class BaseRequest:
     @staticmethod
-    async def get(url, is_json=False):
+    async def get(url: AnyStr, is_json=False) -> Union[Dict, AnyStr]:
 
         await semaphore_batch.acquire()
         if not PARALLEL:

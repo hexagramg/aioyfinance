@@ -9,11 +9,26 @@ import re
 import logging
 from collections import defaultdict
 from typing import Callable, List, Dict, Union, AnyStr, Tuple, Coroutine
-
+from enum import Enum
 
 from .base_requests import BaseRequest
 
 HANDLE_EXCEPTIONS = True  # you can either let library throw errors in data list or separate them
+
+
+class Stats(Enum):
+    """
+    These are keys to Ticker.__data dictionary
+    """
+    TIME_SERIES = 1
+    PROFILE = 2
+    CASHFLOW = 3
+    CASHFLOW_Q = 4
+    STATISTICS = 5
+    BALANCE = 6
+    BALANCE_Q = 7
+    INCOME = 8
+    INCOME_Q = 9
 
 
 def _merge_dicts(dict_args):
@@ -70,7 +85,7 @@ def strip_old_json(fund_json):
 
     inside = fund_json['timeseries']['result']
 
-    inside = list(filter(lambda x: 'timestamp' in x, inside))
+    inside = list(filter(lambda z: 'timestamp' in z, inside))
 
     parsed_dict = defaultdict(dict)
     capital_splitter = re.compile('(?=[A-Z])')
@@ -97,22 +112,25 @@ def strip_old_json(fund_json):
 class Ticker:
     def __init__(self, ticker: AnyStr):
         self.ticker = ticker
-        self._statistics = None
-        self._profile = None
-        self._timeseries = None
-        self._income = None
-        self._balance = None
-        self._cashflow = None
-
-        self._income_quarterly = None
-        self._balance_quarterly = None
-        self._cashflow_quarterly = None
+        self.__data = dict()
 
     async def get_statistics(self):
-        if self._statistics is None:
+        if Stats.STATISTICS not in self.__data:
             await self._get_statistics()
 
-        return self._statistics
+        return self.__data[Stats.STATISTICS]
+
+    def clear(self, key_arr: List[AnyStr] = None):
+        """
+        clears internal dictionary, allows to make requests again
+        :param key_arr: list of keys to clear, if None clean everything
+        """
+        if key_arr:
+            for key in key_arr:
+                if key in self.__data:
+                    del self.__data[key]
+        else:
+            self.__data = dict()
 
     async def get_cashflow(self, annual=True):
         """
@@ -121,18 +139,13 @@ class Ticker:
         :return: stripped dictionary
         """
         if annual:
-            if self._cashflow is not None:
-                return self._cashflow
-            else:
-                main = cash_flow_annual
+            key = Stats.CASHFLOW
+            main = cash_flow_annual
         else:
-            if self._cashflow_quarterly is not None:
-                return self._cashflow_quarterly
-            else:
-                main = cash_flow_quarter
+            key = Stats.CASHFLOW_Q
+            main = cash_flow_quarter
 
-        data = await self._get_fundamentals(main, annual=annual)
-        return strip_old_json(data)
+        return self._get_fund(key, main, annual)
 
     async def get_balance(self, annual=True):
         """
@@ -141,18 +154,13 @@ class Ticker:
         :return: stripped dictionary
         """
         if annual:
-            if self._balance is not None:
-                return self._balance
-            else:
-                main = balance_annual
+            key = Stats.BALANCE
+            main = balance_annual
         else:
-            if self._balance_quarterly is not None:
-                return self._balance_quarterly
-            else:
-                main = balance_quarter
+            key = Stats.BALANCE_Q
+            main = balance_quarter
 
-        data = await self._get_fundamentals(main, annual=annual)
-        return strip_old_json(data)
+        return self._get_fund(key, main, annual)
 
     async def get_income(self, annual=True):
         """
@@ -161,20 +169,27 @@ class Ticker:
         :return: stripped dictionary
         """
         if annual:
-            if self._income is not None:
-                return self._income
-            else:
-                main = income_statement_annual
+            key = Stats.INCOME
+            main = income_statement_annual
         else:
-            if self._income_quarterly is not None:
-                return self._income_quarterly
-            else:
-                main = income_statement_quarter
+            key = Stats.INCOME_Q
+            main = income_statement_quarter
+
+        return self._get_fund(key, main, annual)
+
+    async def _get_fund(self, key, main, annual):
+        """
+            Middle man method cheking is data was already requested
+            if it is not gets requests and does preprocessing
+        """
+        if key in self.__data:
+            return self.__data[key]
 
         data = await self._get_fundamentals(main, annual=annual)
-        return strip_old_json(data)
+        self.__data[key] = strip_old_json(data)
+        return self.__data[key]
 
-    async def get_timeseries(self, interval, range_):
+    async def get_timeseries(self, interval, range_) -> Dict:
         """
 
         :param interval: granularity
@@ -183,24 +198,24 @@ class Ticker:
         valid ranges: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y or timedelta
         :return:
         """
-        if self._timeseries is None:
+        if Stats.TIME_SERIES not in self.__data:
             await self._get_timeseries(interval, range_)
 
-        return self._timeseries
+        return self.__data[Stats.TIME_SERIES]
 
-    async def get_profile(self):
+    async def get_profile(self) -> Dict:
 
-        if self._profile is None:
+        if Stats.PROFILE not in self.__data:
             await self._get_profile()
 
-        return self._profile
+        return self.__data[Stats.PROFILE]
 
-    async def _make_request(self, func):
+    async def _make_request(self, func) -> AnyStr:
         url = f'{base}/{self.ticker}/{func}'
         html = await self._base_request(url)
         return html
 
-    async def _get_fundamentals(self, main_part, annual=True):
+    async def _get_fundamentals(self, main_part, annual=True) -> Dict:
         url = fundamentals_url + self.ticker + main_part
         now = datetime.now()
 
@@ -216,7 +231,7 @@ class Ticker:
 
         return fundamental_json
 
-    async def _request_timeseries(self, interval='1wk', range_: Union[str, timedelta] = '1y'):
+    async def _request_timeseries(self, interval='1wk', range_: Union[str, timedelta] = '1y') -> Dict:
         # TODO support for second query type: param1 & param2 date segment
         # TODO find out if other parameters are actually doing anything
         now = datetime.now()
@@ -231,7 +246,7 @@ class Ticker:
         return ts_json
 
     @staticmethod
-    async def _base_request(url, is_json=False):
+    async def _base_request(url, is_json=False) -> Union[AnyStr, Dict]:
         return await BaseRequest.get(url, is_json)
 
     @symbol_check(funcs['statistics'])
@@ -244,7 +259,7 @@ class Ticker:
         fye = Fiscal Year Ending
         """
         tables = souped.find_all('section')[1].find_all('tbody')
-        self._statistics = _merge_dicts([self._parse_table(tb) for tb in tables])
+        self.__data[Stats.STATISTICS] = _merge_dicts([self._parse_table(tb) for tb in tables])
 
     async def _get_timeseries(self, interval, range_: Union[str, timedelta]):
         """
@@ -269,7 +284,7 @@ class Ticker:
                     reform_ts['splits'] = events['splits']
             data_ts = base_ts['indicators']
             reform_ts = _merge_dicts([reform_ts, data_ts['quote'][0], data_ts['adjclose'][0]])
-            self._timeseries = reform_ts
+            self.__data[Stats.TIME_SERIES] = reform_ts
 
     @symbol_check(funcs['profile'])
     async def _get_profile(self, *, souped):
@@ -277,13 +292,16 @@ class Ticker:
         section = souped.find_all('section')[1]
         data = section.find_all('p')[1].find_all('span')
         name = section.h3.text
-        self._profile = {
+        self.__data[Stats.PROFILE] = {
             'Sector': data[1].text,
             'Industry': data[3].text,
             'Name': name
         }
 
-    def _parse_table(self, table):
+    def _parse_table(self, table) -> Dict:
+        """
+        method for parsing HTML table
+        """
         dict_table = {}
         for row in table.children:
             first, second = list(row.children)
@@ -294,9 +312,18 @@ class Ticker:
 
     @staticmethod
     def _replace_keys(key: str):
-        last_numbers = re.compile(r'((?!\d+$)(?:\S+)|^\d+$)') #search for all non whitespace characters
-        # that are not numbers at the end of the string
+        """
+        cleaning table keys from unnecessary symbols, such as:
+        1) numbers at the end of the string
+        2) brackets with date inside of them for consistency
+        """
+        last_numbers = re.compile(r'((?!\d+$)(?:\S+)|^\d+$)')
+        #  search for all non whitespace characters
+        #  that are not numbers at the end of the string
+
         key = ''.join(last_numbers.findall(key))
+        if ',' in key:
+            key = key.split('(')[0] + key.split(')')[1]
 
         return key
 
@@ -318,6 +345,10 @@ class Tickers:
             raise KeyError(f'no such {ticker}')
 
     async def _base_get(self, func: AnyStr, *args, **kwargs):
+        """
+        call method without reusing code for each one
+        :param func: method name
+        """
         coro_arr = [getattr(tick, func)(*args, **kwargs) for tick in self._tickers]
         return await self._get_tasks(coro_arr)
 
@@ -339,7 +370,15 @@ class Tickers:
     async def get_income(self, annual=True):
         return await self._base_get('get_income', annual)
 
-    async def _get_tasks(self, coroutine_array: List[Coroutine]) -> Union[Tuple[List[Dict], List[AnyStr]], \
+    async def clear(self, key_arr: List[AnyStr] = None):
+        """
+        clearing data dictionary inside every ticker
+        :param key_arr: array of keys to clean, if None clean every key
+        """
+        for tick in self._tickers:
+            tick.clear(key_arr)
+
+    async def _get_tasks(self, coroutine_array: List[Coroutine]) -> Union[Tuple[List[Dict], List[AnyStr]],
                                                                           List[Union[Dict, BaseException]]]:
         """
         hopefully universal function. For it to work
