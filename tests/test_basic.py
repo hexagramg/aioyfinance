@@ -136,6 +136,7 @@ class MyTestCase(unittest.TestCase):
         pprint(right)
         for res in right:
             self.assertNotIsInstance(res, Exception)
+        conf = yf.Config.create(handle_exceptions=True)
 
 print()
 if __name__ == '__main__':
