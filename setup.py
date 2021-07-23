@@ -38,7 +38,7 @@ setup(
 
     python_requires='>=3.9, <4',
 
-    install_requires=['aiohttp', 'bs4'],  # Optional
+    install_requires=['aiohttp', 'beautifulsoup4'],  # Optional
 
     extras_require={  # Optional
         'dev': ['pandas'],
