@@ -130,7 +130,7 @@ class MyTestCase(unittest.TestCase):
         conf = yf.Config.create()
 
     def test_stat(self):
-        tickers = yf.Tickers(['appl', 'nvda'])
+        tickers = yf.Tickers(['aapl', 'nvda'])
         conf = yf.Config.create(handle_exceptions=False)
         right= loop.run_until_complete(tickers.get_statistics())
         pprint(right)
