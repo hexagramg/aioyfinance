@@ -39,6 +39,9 @@ async def quick():
     balance_sheet_quarterly = await nvda.get_balance(annual=False) 
     cash_flow = await nvda.get_cashflow()
     income = await nvda.get_income()
+    
+    # all the results are cached, to make new requests call
+    nvda.clear()
 
 ```
 
@@ -63,6 +66,13 @@ async def quick():
     data, _ = await tickers.get_profiles()
     data, _ = await tickers.get_income(annual=False)
     # for every method in Ticker there is a caller in Tickers
+    # also you can get corresponding ticker object by __gettitem__
+    ticker = tickers['msft']
+    # all the results from requests are saved in corresponding ticker object, so 
+    data = await ticker.get_income(annual=False) # won`t make requests to server
+    # to clean all tickers together from data call
+    tickers.clear()
+    
     
 ```
 
@@ -89,6 +99,7 @@ async def params():
         handle_exceptions=True # this variable alters tickers return behaviour. 
         # setting it to False  results in Tickers returning single list of Union[dict, BaseException]
         # by default it is True and tuple(Results, TickersThatCaughtExceptions) is returned
+        # and tickers that caught exceptions are cleared from tickers object
     )
     
     no_exc = yf.Config.create(handle_exceptions=False)

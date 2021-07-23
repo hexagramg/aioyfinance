@@ -7,14 +7,14 @@ from asyncio import Semaphore, Lock
 import enum
 from random import uniform, choice
 import logging
-from typing import Union, Dict, AnyStr, List
+from typing import Union, Dict, AnyStr, List, Optional
 
 
 class Config:
     """
     Config class
     """
-
+    internal: Optional[Config] = None
     def __init__(self, parallel: bool = True, max_batch: int = 5, proxy_url: Union[AnyStr, List[AnyStr]] = None,
                  max_retries: int = 3, retry_delay: int = 1, max_rand_delay: float = 0.5, min_rand_delay: float = 0.01,
                  handle_exceptions: bool = True):
@@ -46,15 +46,14 @@ class Config:
         :param min_rand_delay: Minimum random delay between requests
         :param handle_exceptions: Tickers returns tuple(list of results, list of tickers names that caught
             exceptions) if True or list of results with exceptions if False
-        :return: global config class
+        :return: global Config.internal class
         """
 
-        global config
-        config = cls(parallel=parallel, max_batch=max_batch, proxy_url=proxy_url, max_retries=max_retries,
+        Config.internal = cls(parallel=parallel, max_batch=max_batch, proxy_url=proxy_url, max_retries=max_retries,
                      retry_delay=retry_delay, max_rand_delay=max_rand_delay, min_rand_delay=min_rand_delay,
                      handle_exceptions=handle_exceptions)
 
-        return config
+        return Config.internal
 
     @property
     def pick_rand_delay(self):
@@ -111,7 +110,6 @@ class Config:
         return self._semaphore_batch
 
 
-config: Union[Config, None] = None
 Config.create()
 
 
@@ -119,18 +117,18 @@ class BaseRequest:
     @staticmethod
     async def get(url: AnyStr, is_json=False) -> Union[Dict, AnyStr]:
 
-        await config.semaphore_batch.acquire()
-        if not config.parallel:
-            await config.lock.acquire()
+        await Config.internal.semaphore_batch.acquire()
+        if not Config.internal.parallel:
+            await Config.internal.lock.acquire()
 
-        await asyncio.sleep(config.pick_rand_delay)
+        await asyncio.sleep(Config.internal.pick_rand_delay)
 
         async with aiohttp.ClientSession() as session:
 
-            retries = config.max_retries
+            retries = Config.internal.max_retries
 
             while retries > 0:
-                async with session.get(url, proxy=config.proxy) as resp:
+                async with session.get(url, proxy=Config.internal.proxy) as resp:
                     try:
                         if not is_json:
                             result = await resp.text()
@@ -141,15 +139,15 @@ class BaseRequest:
                         logging.error(url + ' ' + repr(e))
                         retries -= 1
                         if retries:  # if > 0
-                            await asyncio.sleep(config.retry_delay)
+                            await asyncio.sleep(Config.internal.retry_delay)
                         else:
                             result = e
                     else:
                         break
 
-            config.semaphore_batch.release()
-            if not config.parallel:
-                config.lock.release()
+            Config.internal.semaphore_batch.release()
+            if not Config.internal.parallel:
+                Config.internal.lock.release()
 
             await asyncio.sleep(0)  # next code is computational, let other requests finish
 

@@ -3,6 +3,8 @@ import aioyfinance as yf
 import asyncio as asy
 from aioyfinance.old_urls import *
 from aioyfinance.tickers import strip_old_json
+from collections import defaultdict
+
 
 loop = asy.get_event_loop()
 
@@ -50,8 +52,14 @@ class MyTestCase(unittest.TestCase):
         try_block(ticker.get_timeseries('1d', '1mo'))
         try_block(ticker.get_statistics())
         try_block(ticker.get_profile())
+        try_block(ticker.get_income())
 
         self.assertNotIn(False, fails)
+
+        tickers = yf.Tickers(['lolololololo'])
+        r,w = loop.run_until_complete(tickers.get_income())
+        self.assertListEqual(w, ['lolololololo'])
+
 
     def test_mult_wrong(self):
         wrong_tickers = ['amd', 'lalaboba', 'nvda', 'fb', 'goog', 'tsla', 'v', 'bac']
@@ -60,6 +68,12 @@ class MyTestCase(unittest.TestCase):
 
         right, wrong = loop.run_until_complete(tickers.get_statistics())
 
+        self.assertEqual(len(right), 7)
+        self.assertEqual(len(wrong), 1)
+
+        wrong_tickers = ['amd', 'lalaboba', 'nvda', 'fb', 'goog', 'tsla', 'v', 'bac']
+        tickers = yf.Tickers(wrong_tickers)
+        right, wrong = loop.run_until_complete(tickers.get_income())
         self.assertEqual(len(right), 7)
         self.assertEqual(len(wrong), 1)
 
@@ -100,6 +114,21 @@ class MyTestCase(unittest.TestCase):
             loop.run_until_complete(ticker.get_statistics())
 
         self.assertIsNotNone(data)
+
+    def test_config(self):
+        tickers = yf.Tickers(['aapl', 'nvda', 'actuallywrong'])
+        ri_wro = loop.run_until_complete(tickers.get_balance())
+
+        conf = yf.Config.create(handle_exceptions=False)
+        both = loop.run_until_complete(tickers.get_income())
+
+        self.assertIsInstance(both, list)
+        self.assertIsInstance(ri_wro, tuple)
+        self.assertIsNotNone(ri_wro[1])
+        self.assertIsInstance(ri_wro[0][0], dict)
+
+        conf = yf.Config.create()
+
 
 if __name__ == '__main__':
     unittest.main()

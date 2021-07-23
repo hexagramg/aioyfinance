@@ -11,7 +11,7 @@ from collections import defaultdict
 from typing import Callable, List, Dict, Union, AnyStr, Tuple, Coroutine
 from enum import Enum
 
-from .base_requests import BaseRequest, config
+from .base_requests import BaseRequest, Config
 
 
 class Stats(Enum):
@@ -106,7 +106,8 @@ def strip_old_json(fund_json):
             'data': values,
             'info': [d for d in x[full_name]]
         }
-
+    if not parsed_dict:
+        raise NameError
     return parsed_dict
 
 
@@ -162,7 +163,7 @@ class Ticker:
             key = Stats.CASHFLOW_Q
             main = cash_flow_quarter
 
-        return self._get_fund(key, main, annual)
+        return await self._get_fund(key, main, annual)
 
     async def get_balance(self, annual=True):
         """
@@ -177,7 +178,7 @@ class Ticker:
             key = Stats.BALANCE_Q
             main = balance_quarter
 
-        return self._get_fund(key, main, annual)
+        return await self._get_fund(key, main, annual)
 
     async def get_income(self, annual=True):
         """
@@ -192,7 +193,7 @@ class Ticker:
             key = Stats.INCOME_Q
             main = income_statement_quarter
 
-        return self._get_fund(key, main, annual)
+        return await self._get_fund(key, main, annual)
 
     async def _get_fund(self, key, main, annual):
         """
@@ -396,7 +397,7 @@ class Tickers:
         array of data and exceptions mixed. See HANDLE_EXCEPTIONS variable
         """
         completed = await asyncio.gather(*coroutine_array, return_exceptions=True)
-        if config.handle_exceptions:
+        if Config.internal.handle_exceptions:
             wrong_indexes = []
             excepted_tickers = []
             for i, value in enumerate(completed):
