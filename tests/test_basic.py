@@ -4,7 +4,7 @@ import asyncio as asy
 from aioyfinance.old_urls import *
 from aioyfinance.tickers import strip_old_json
 from collections import defaultdict
-
+from pprint import pprint
 
 loop = asy.get_event_loop()
 
@@ -129,6 +129,12 @@ class MyTestCase(unittest.TestCase):
 
         conf = yf.Config.create()
 
+    def test_stat(self):
+        tickers = yf.Tickers(['appl', 'nvda', 'lolololo'])
+        conf = yf.Config.create(handle_exceptions=False)
+        right= loop.run_until_complete(tickers.get_statistics())
+        pprint(right)
 
+print()
 if __name__ == '__main__':
     unittest.main()
