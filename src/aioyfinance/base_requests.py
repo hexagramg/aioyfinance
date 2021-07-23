@@ -1,53 +1,136 @@
+from __future__ import annotations
 import asyncio
 
 import aiohttp
 import aiohttp.web as aioweb
 from asyncio import Semaphore, Lock
 import enum
-from random import uniform
+from random import uniform, choice
 import logging
-from typing import Union, Dict, AnyStr
+from typing import Union, Dict, AnyStr, List
 
-PARALLEL = True #Allow overlapping of requests
 
-if not PARALLEL:
-    lock_ = Lock()
-else:
-    lock_ = None
+class Config:
+    """
+    Config class
+    """
 
-MAX_BATCH = 10 #maximum requests active
-semaphore_batch = Semaphore(MAX_BATCH)
+    def __init__(self, parallel: bool = True, max_batch: int = 5, proxy_url: Union[AnyStr, List[AnyStr]] = None,
+                 max_retries: int = 3, retry_delay: int = 1, max_rand_delay: float = 0.5, min_rand_delay: float = 0.01,
+                 handle_exceptions: bool = True):
+        """
+        Do not use init directly, use create method
+        """
+        self.parallel = parallel,
+        self.max_batch = max_batch
+        self.proxy_url = proxy_url
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
+        self.max_rand_delay = max_rand_delay
+        self.min_rand_delay = min_rand_delay
+        self.handle_exceptions = handle_exceptions
 
-PROXY_URL = None #set this parameter according to aiohttp documentation
+    @classmethod
+    def create(cls, *, parallel: bool = True, max_batch: int = 5, proxy_url: Union[AnyStr, List[AnyStr]] = None,
+               max_retries: int = 3, retry_delay: int = 1, max_rand_delay: float = 0.5,
+               min_rand_delay: float = 0.01, handle_exceptions: bool = True) -> Config:
+        """
+        Sets global settings variable, keywords only
+        :param parallel: Controls overlapping of requests
+        :param max_batch: Maximum requests active
+        :param proxy_url: Set strings according to aiohttp docs
+        String or array of strings for random choice of proxy
+        :param max_retries: Amount of retries if request fails
+        :param retry_delay: Delay between retries
+        :param max_rand_delay: Maximum random delay between requests
+        :param min_rand_delay: Minimum random delay between requests
+        :param handle_exceptions: Tickers returns tuple(list of results, list of tickers names that caught
+            exceptions) if True or list of results with exceptions if False
+        :return: global config class
+        """
 
-MAX_RETRIES = 3 #amount of retries
-if MAX_RETRIES <= 0:
-    no_retries = True
-else:
-    no_retries = False
+        global config
+        config = cls(parallel=parallel, max_batch=max_batch, proxy_url=proxy_url, max_retries=max_retries,
+                     retry_delay=retry_delay, max_rand_delay=max_rand_delay, min_rand_delay=min_rand_delay,
+                     handle_exceptions=handle_exceptions)
 
-RETRY_DELAY = 1
+        return config
 
-MAX_RAND_DELAY = 0.02
-MIN_RAND_DELAY = 0.01
+    @property
+    def pick_rand_delay(self):
+        return uniform(self.min_rand_delay, self.max_rand_delay)
+
+    @property
+    def proxy_url(self):
+        return self._proxy_url
+
+    @proxy_url.setter
+    def proxy_url(self, proxy: Union[AnyStr, List[AnyStr]]):
+        if isinstance(proxy, List):
+            self._proxy_rand = True
+        else:
+            self._proxy_rand = False
+
+        self._proxy_url = proxy
+
+    @property
+    def proxy(self):
+        if self._proxy_rand:
+            return choice(self._proxy_url)
+        else:
+            return self._proxy_url
+
+    @property
+    def parallel(self):
+        return self._parallel
+
+    @parallel.setter
+    def parallel(self, value: bool):
+        if not value:
+            self._lock = Lock()
+        else:
+            self._lock = None
+
+        self._parallel = value
+
+    @property
+    def max_batch(self):
+        return self._max_batch
+
+    @max_batch.setter
+    def max_batch(self, value: int):
+        self._max_batch = value
+        self._semaphore_batch = Semaphore(self._max_batch)
+
+    @property
+    def lock(self):
+        return self._lock
+
+    @property
+    def semaphore_batch(self):
+        return self._semaphore_batch
+
+
+config: Union[Config, None] = None
+Config.create()
 
 
 class BaseRequest:
     @staticmethod
     async def get(url: AnyStr, is_json=False) -> Union[Dict, AnyStr]:
 
-        await semaphore_batch.acquire()
-        if not PARALLEL:
-            await lock_.acquire()
+        await config.semaphore_batch.acquire()
+        if not config.parallel:
+            await config.lock.acquire()
 
-        rand = uniform(MIN_RAND_DELAY, MAX_RAND_DELAY)
-        await asyncio.sleep(rand)
+        await asyncio.sleep(config.pick_rand_delay)
 
         async with aiohttp.ClientSession() as session:
 
-            retries = MAX_RETRIES
-            while retries or no_retries: #if retries > 0
-                async with session.get(url, proxy=PROXY_URL) as resp:
+            retries = config.max_retries
+
+            while retries > 0:
+                async with session.get(url, proxy=config.proxy) as resp:
                     try:
                         if not is_json:
                             result = await resp.text()
@@ -57,22 +140,20 @@ class BaseRequest:
                     except aioweb.HTTPError as e:
                         logging.error(url + ' ' + repr(e))
                         retries -= 1
-                        if retries: #if > 0
-                            await asyncio.sleep(RETRY_DELAY)
+                        if retries:  # if > 0
+                            await asyncio.sleep(config.retry_delay)
                         else:
                             result = e
                     else:
                         break
 
-            semaphore_batch.release()
-            if not PARALLEL:
-                lock_.release()
+            config.semaphore_batch.release()
+            if not config.parallel:
+                config.lock.release()
 
-            await asyncio.sleep(0) #next code is computational, let other requests finish
+            await asyncio.sleep(0)  # next code is computational, let other requests finish
 
-            if isinstance(result, Exception): #ensure that everything is released, then raise
+            if isinstance(result, Exception):  # ensure that everything is released, then raise
                 raise result
 
             return result
-
-

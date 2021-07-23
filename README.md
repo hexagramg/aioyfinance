@@ -11,7 +11,7 @@ Yahoo Finance asynchronous data downloader built with aiohttp and inspired by [y
 - [ ] parsing analysis and holders
 - [ ] ETF support (You can get timeseries, other methods will raise exceptions)
 - [x] global settings
-- [x] proxy implementation
+- [x] proxy implementation with support for random proxy from list
 - [ ] easy pandas conversion
 
 ### Ticker object
@@ -66,27 +66,33 @@ async def quick():
     
 ```
 
-There is a way to configure some requests handling parameters
+There is a way to configure some requests handling parameters. There is special class Config that controls
+all of them. If you don`t intend changing defaults, you can skip this part as config is created by default
 
 ```python
 import aioyfinance as yf
 
 
 async def params():
-    yf.PARALLEL = True  # allow overlapping of requests
-    yf.MAX_BATCH = 5  # maximum requests active
-    yf.PROXY_URL = None  # set this parameter according to aiohttp documentation
-    yf.MAX_RETRIES = 3  # amount of retries
-    yf.RETRY_DELAY = 1  # delay between retries
-
-    # there is a random delay between each request, set them according to your needs
-    yf.MAX_RAND_DELAY = 0.5
-    yf.MIN_RAND_DELAY = 0.1
-
-    yf.HANDLE_EXCEPTIONS = True 
-    # Setting this variable to False alters tickers return variable.
-    # List of results with exceptions is returned instead of tuple[Results, WrongTickers]
-    yf.HANDLE_EXCEPTIONS = False
+    # here are the defaults
+    conf = yf.Config.create( # only kwargs are accepted
+        parallel=True, # allow overlapping of requests
+        max_batch=5, # maximum requests active
+        proxy_url=None, # either string or list of strings. If it is list, proxy is picked randomly
+        max_retries=3, # amount of retries
+        retry_delay=1, # delay between retries
+        
+        # there is a random delay between each request, set them according to your needs 
+        max_rand_delay=0.5,
+        min_rand_delay=0.01,
+        
+        handle_exceptions=True # this variable alters tickers return behaviour. 
+        # setting it to False  results in Tickers returning single list of Union[dict, BaseException]
+        # by default it is True and tuple(Results, TickersThatCaughtExceptions) is returned
+    )
+    
+    no_exc = yf.Config.create(handle_exceptions=False)
+    
     tickers = yf.Tickers(['aapl', 'wrong'])
     data_with_exceptions = await tickers.get_statistics()
 

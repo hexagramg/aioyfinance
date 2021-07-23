@@ -11,9 +11,7 @@ from collections import defaultdict
 from typing import Callable, List, Dict, Union, AnyStr, Tuple, Coroutine
 from enum import Enum
 
-from .base_requests import BaseRequest
-
-HANDLE_EXCEPTIONS = True  # you can either let library throw errors in data list or separate them
+from .base_requests import BaseRequest, config
 
 
 class Stats(Enum):
@@ -398,7 +396,7 @@ class Tickers:
         array of data and exceptions mixed. See HANDLE_EXCEPTIONS variable
         """
         completed = await asyncio.gather(*coroutine_array, return_exceptions=True)
-        if HANDLE_EXCEPTIONS:
+        if config.handle_exceptions:
             wrong_indexes = []
             excepted_tickers = []
             for i, value in enumerate(completed):
