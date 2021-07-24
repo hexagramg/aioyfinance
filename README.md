@@ -3,7 +3,7 @@
 Yahoo Finance asynchronous data downloader built with aiohttp and inspired by [yfinance](https://github.com/ranaroussi/yfinance)
 
 ### Current progress:
-####Implemented:
+#### Implemented:
 - timeseries getter
 - statistics getter (raw names)
 - profile getter
@@ -12,7 +12,7 @@ Yahoo Finance asynchronous data downloader built with aiohttp and inspired by [y
 - global settings
 - proxy implementation with support for random proxy from list
 
-####ToDo:
+#### ToDo:
 - parsing analysis and holders
 - ETF support (You can get timeseries, other methods will raise exceptions)
 - easy pandas conversion
