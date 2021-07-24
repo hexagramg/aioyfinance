@@ -9,7 +9,7 @@ long_description = (here / 'README.md').read_text(encoding='utf-8')
 setup(
     name='aioyfinance',  # Required
 
-    version='0.1',  # Required
+    version='0.1.1',  # Required
 
     description='Yahoo Finance asynchronous data downloader',  # Optional
 
@@ -22,10 +22,10 @@ setup(
     author='hexagramg',  # Optional
 
     classifiers=[  # Optional
-        "Development Status :: 2 - Pre-Alpha"
+        "Development Status :: 2 - Pre-Alpha",
         'Intended Audience :: Developers',
 
-        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)'
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3 :: Only',
     ],

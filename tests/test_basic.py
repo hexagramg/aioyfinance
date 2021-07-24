@@ -133,7 +133,6 @@ class MyTestCase(unittest.TestCase):
         tickers = yf.Tickers(['aapl', 'nvda'])
         conf = yf.Config.create(handle_exceptions=False)
         right= loop.run_until_complete(tickers.get_statistics())
-        pprint(right)
         for res in right:
             self.assertNotIsInstance(res, Exception)
         conf = yf.Config.create(handle_exceptions=True)

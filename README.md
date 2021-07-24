@@ -3,16 +3,19 @@
 Yahoo Finance asynchronous data downloader built with aiohttp and inspired by [yfinance](https://github.com/ranaroussi/yfinance)
 
 #### Current progress:
-- [x] timeseries getter
-- [x] statistics getter (raw names)
-- [x] profile getter
-- [x] multiple tickers simultaneously 
-- [x] parsing different financials (income statement, balance sheet, cash flow) 
-- [ ] parsing analysis and holders
-- [ ] ETF support (You can get timeseries, other methods will raise exceptions)
-- [x] global settings
-- [x] proxy implementation with support for random proxy from list
-- [ ] easy pandas conversion
+#####Implemented:
+- timeseries getter
+- statistics getter (raw names)
+- profile getter
+- multiple tickers simultaneously 
+- parsing different financials (income statement, balance sheet, cash flow)
+- global settings
+- proxy implementation with support for random proxy from list
+
+#####ToDo:
+- parsing analysis and holders
+- ETF support (You can get timeseries, other methods will raise exceptions)
+- easy pandas conversion
 
 ### Ticker object
 ```python
@@ -75,13 +78,12 @@ async def quick():
     
     
 ```
-
+### Configuration
 There is a way to configure some requests handling parameters. There is special class Config that controls
 all of them. If you don`t intend changing defaults, you can skip this part as config is created by default
 
 ```python
 import aioyfinance as yf
-
 
 async def params():
     # here are the defaults
