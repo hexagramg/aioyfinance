@@ -20,4 +20,4 @@ jobs:
         python setup.py install
     - name: Analysing the code with pylint
       run: |
-        pylint src.aioyfinance --max-line-length 240
+        pylint src/aioyfinance --max-line-length 240
