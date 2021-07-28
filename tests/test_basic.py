@@ -81,7 +81,7 @@ class MyTestCase(unittest.TestCase):
 
         ticker = yf.Ticker('nvda')
 
-        data = loop.run_until_complete(ticker._get_fundamentals(income_statement_annual))
+        data = loop.run_until_complete(ticker._get_fundamentals(INCOME_STATEMENT_ANNUAL))
 
         strip = strip_old_json(data)
 

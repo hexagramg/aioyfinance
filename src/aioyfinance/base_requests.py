@@ -1,14 +1,15 @@
+"""
+Config and requests implementation
+"""
 from __future__ import annotations
+import logging
 import asyncio
 
+from asyncio import Semaphore, Lock
+from random import uniform, choice
+from typing import Union, Dict, AnyStr, List, Optional
 import aiohttp
 import aiohttp.web as aioweb
-from asyncio import Semaphore, Lock
-import enum
-from random import uniform, choice
-import logging
-from typing import Union, Dict, AnyStr, List, Optional
-
 
 class Config:
     """
@@ -21,7 +22,7 @@ class Config:
         """
         Do not use init directly, use create method
         """
-        self.parallel = parallel,
+        self.parallel = parallel
         self.max_batch = max_batch
         self.proxy_url = proxy_url
         self.max_retries = max_retries
@@ -76,8 +77,8 @@ class Config:
     def proxy(self):
         if self._proxy_rand:
             return choice(self._proxy_url)
-        else:
-            return self._proxy_url
+
+        return self._proxy_url
 
     @property
     def parallel(self):

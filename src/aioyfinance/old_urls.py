@@ -4,11 +4,11 @@ file with long ass urls for fundamental jsons
 why the hell would they do them so long....
 
 """
-fundamentals_url = 'https://query1.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/'
+FUNDAMETALS_URL = 'https://query1.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/'
 
 # dont forget
 # period1 and period2 and symbol
-income_statement_annual = '?lang=en-US&region=US&padTimeSeries=true&type=annualTaxEffectOfUnusualItems' \
+INCOME_STATEMENT_ANNUAL = '?lang=en-US&region=US&padTimeSeries=true&type=annualTaxEffectOfUnusualItems' \
                           '%2CtrailingTaxEffectOfUnusualItems%2CannualTaxRateForCalcs%2CtrailingTaxRateForCalcs' \
                           '%2CannualNormalizedEBITDA%2CtrailingNormalizedEBITDA%2CannualNormalizedDilutedEPS' \
                           '%2CtrailingNormalizedDilutedEPS%2CannualNormalizedBasicEPS%2CtrailingNormalizedBasicEPS' \
@@ -96,7 +96,7 @@ income_statement_annual = '?lang=en-US&region=US&padTimeSeries=true&type=annualT
                           '%2CannualOperatingRevenue%2CtrailingOperatingRevenue&merge=false&corsDomain=finance.yahoo' \
                           '.com '
 
-income_statement_quarter = '?lang=en-US&region=US&padTimeSeries=true&type=quarterlyTaxEffectOfUnusualItems' \
+INCOME_STATEMENT_QUARTER = '?lang=en-US&region=US&padTimeSeries=true&type=quarterlyTaxEffectOfUnusualItems' \
                            '%2CtrailingTaxEffectOfUnusualItems%2CquarterlyTaxRateForCalcs%2CtrailingTaxRateForCalcs' \
                            '%2CquarterlyNormalizedEBITDA%2CtrailingNormalizedEBITDA%2CquarterlyNormalizedDilutedEPS' \
                            '%2CtrailingNormalizedDilutedEPS%2CquarterlyNormalizedBasicEPS' \
@@ -192,7 +192,7 @@ income_statement_quarter = '?lang=en-US&region=US&padTimeSeries=true&type=quarte
                            '%2CtrailingExciseTaxes%2CquarterlyOperatingRevenue%2CtrailingOperatingRevenue&merge=false' \
                            '&corsDomain=finance.yahoo.com '
 
-balance_annual = '?lang=en-US&region=US&padTimeSeries=true&type=annualTreasurySharesNumber' \
+BALANCE_ANNUAL = '?lang=en-US&region=US&padTimeSeries=true&type=annualTreasurySharesNumber' \
                  '%2CtrailingTreasurySharesNumber%2CannualPreferredSharesNumber%2CtrailingPreferredSharesNumber' \
                  '%2CannualOrdinarySharesNumber%2CtrailingOrdinarySharesNumber%2CannualShareIssued' \
                  '%2CtrailingShareIssued%2CannualNetDebt%2CtrailingNetDebt%2CannualTotalDebt%2CtrailingTotalDebt' \
@@ -308,7 +308,7 @@ balance_annual = '?lang=en-US&region=US&padTimeSeries=true&type=annualTreasurySh
                  '%2CtrailingCashAndCashEquivalents%2CannualCashEquivalents%2CtrailingCashEquivalents' \
                  '%2CannualCashFinancial%2CtrailingCashFinancial&merge=false&corsDomain=finance.yahoo.com '
 
-balance_quarter = '?lang=en-US&region=USpadTimeSeries=true&type=quarterlyTreasurySharesNumber' \
+BALANCE_QUARTER = '?lang=en-US&region=USpadTimeSeries=true&type=quarterlyTreasurySharesNumber' \
                   '%2CtrailingTreasurySharesNumber%2CquarterlyPreferredSharesNumber%2CtrailingPreferredSharesNumber' \
                   '%2CquarterlyOrdinarySharesNumber%2CtrailingOrdinarySharesNumber%2CquarterlyShareIssued' \
                   '%2CtrailingShareIssued%2CquarterlyNetDebt%2CtrailingNetDebt%2CquarterlyTotalDebt' \
@@ -429,7 +429,7 @@ balance_quarter = '?lang=en-US&region=USpadTimeSeries=true&type=quarterlyTreasur
                   '%2CtrailingCashAndCashEquivalents%2CquarterlyCashEquivalents%2CtrailingCashEquivalents' \
                   '%2CquarterlyCashFinancial%2CtrailingCashFinancial&merge=false&corsDomain=finance.yahoo.com '
 
-cash_flow_annual = '?lang=en-US&region=US&padTimeSeries=true&type=annualForeignSales%2CtrailingForeignSales' \
+CASH_FLOW_ANNUAL = '?lang=en-US&region=US&padTimeSeries=true&type=annualForeignSales%2CtrailingForeignSales' \
                    '%2CannualDomesticSales%2CtrailingDomesticSales%2CannualAdjustedGeographySegmentData' \
                    '%2CtrailingAdjustedGeographySegmentData%2CannualFreeCashFlow%2CtrailingFreeCashFlow' \
                    '%2CannualRepurchaseOfCapitalStock%2CtrailingRepurchaseOfCapitalStock%2CannualRepaymentOfDebt' \
@@ -539,7 +539,7 @@ cash_flow_annual = '?lang=en-US&region=US&padTimeSeries=true&type=annualForeignS
                    '%2CtrailingReceiptsfromGovernmentGrants%2CannualReceiptsfromCustomers' \
                    '%2CtrailingReceiptsfromCustomers&merge=false&corsDomain=finance.yahoo.com '
 
-cash_flow_quarter = '?lang=en-US&region=US&padTimeSeries=true&type=quarterlyForeignSales%2CtrailingForeignSales' \
+CASH_FLOW_QUARTER = '?lang=en-US&region=US&padTimeSeries=true&type=quarterlyForeignSales%2CtrailingForeignSales' \
                     '%2CquarterlyDomesticSales%2CtrailingDomesticSales%2CquarterlyAdjustedGeographySegmentData' \
                     '%2CtrailingAdjustedGeographySegmentData%2CquarterlyFreeCashFlow%2CtrailingFreeCashFlow' \
                     '%2CquarterlyRepurchaseOfCapitalStock%2CtrailingRepurchaseOfCapitalStock' \
@@ -658,4 +658,4 @@ cash_flow_quarter = '?lang=en-US&region=US&padTimeSeries=true&type=quarterlyFore
                     '%2CtrailingReceiptsfromCustomers&merge=false&corsDomain=finance.yahoo.com '
 
 # add that to the url
-fundamental_formatter = '&period1={period1}&period2={period2}&symbol={symbol}'
+FUNDAMENTAL_FORMATTER = '&period1={period1}&period2={period2}&symbol={symbol}'

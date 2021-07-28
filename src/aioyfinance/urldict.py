@@ -1,9 +1,12 @@
-from datetime import datetime, timedelta
+"""
+url constants and date OFFSETS
+"""
+from datetime import timedelta
 
-base = 'https://finance.yahoo.com/quote'
-query = 'https://query1.finance.yahoo.com/v8/finance/chart'
-query_opt = 'region=US&lang=en-US'
-funcs = {
+BASE = 'https://finance.yahoo.com/quote'
+QUERY = 'https://query1.finance.yahoo.com/v8/finance/chart'
+QUERY_OPTIONAL = 'region=US&lang=en-US'
+FUNCS = {
     'statistics': 'key-statistics',
     'financials': 'financials',
     'balance_sheet': 'balance-sheet',
@@ -13,7 +16,7 @@ funcs = {
     'profile': 'profile'
 }
 
-offsets = {
+OFFSETS = {
     '1d': timedelta(days=1),
     '5d': timedelta(days=5),
     '1mo': timedelta(days=30),

@@ -1,16 +1,19 @@
+"""
+Ticker and Tickers class declaration
+"""
+
 import asyncio
-from bs4 import BeautifulSoup
-import json
-from .urldict import base, funcs, query, query_opt, offsets
+import logging
 from datetime import datetime, timedelta
 from functools import wraps
-from .old_urls import *
 import re
-import logging
 from collections import defaultdict
-from typing import Callable, List, Dict, Union, AnyStr, Tuple, Coroutine
+from typing import List, Dict, Union, AnyStr, Tuple, Coroutine
 from enum import Enum
-
+from bs4 import BeautifulSoup
+from .urldict import BASE, FUNCS, QUERY, QUERY_OPTIONAL, OFFSETS
+from .old_urls import FUNDAMENTAL_FORMATTER, FUNDAMETALS_URL, INCOME_STATEMENT_ANNUAL, INCOME_STATEMENT_QUARTER,\
+                        BALANCE_ANNUAL, BALANCE_QUARTER, CASH_FLOW_QUARTER, CASH_FLOW_ANNUAL
 from .base_requests import BaseRequest, Config
 
 
@@ -45,7 +48,7 @@ def symbol_check(func):
     does request and checkes if symbol is correct, if it is not raises NameError
 
     passes souped html to the method
-    :param func: item from funcs dictionary
+    :param func: item from FUNCS dictionary
     :return: async method
     """
 
@@ -90,7 +93,7 @@ def strip_old_json(fund_json):
 
     parsed_dict = defaultdict(dict)
     capital_splitter = re.compile('(?=[A-Z])')
-    for i, x in enumerate(inside):
+    for x in inside:
         full_name = x['meta']['type'][0]
         mod, name = capital_splitter.split(full_name, 1)
 
@@ -104,7 +107,7 @@ def strip_old_json(fund_json):
         parsed_dict[mod][name] = {
             'timestamp': x['timestamp'],
             'data': values,
-            'info': [d for d in x[full_name]]
+            'info': list(x[full_name])
         }
     if not parsed_dict:
         raise NameError
@@ -138,7 +141,7 @@ class Ticker:
 
         return self.__data[Stats.STATISTICS]
 
-    @symbol_check(funcs['statistics'])
+    @symbol_check(FUNCS['statistics'])
     async def _get_statistics(self, souped):
         """
         mrq = Most Recent Quarter
@@ -158,10 +161,10 @@ class Ticker:
         """
         if annual:
             key = Stats.CASHFLOW
-            main = cash_flow_annual
+            main = CASH_FLOW_ANNUAL
         else:
             key = Stats.CASHFLOW_Q
-            main = cash_flow_quarter
+            main = CASH_FLOW_QUARTER
 
         return await self._get_fund(key, main, annual)
 
@@ -173,10 +176,10 @@ class Ticker:
         """
         if annual:
             key = Stats.BALANCE
-            main = balance_annual
+            main = BALANCE_ANNUAL
         else:
             key = Stats.BALANCE_Q
-            main = balance_quarter
+            main = BALANCE_QUARTER
 
         return await self._get_fund(key, main, annual)
 
@@ -188,10 +191,10 @@ class Ticker:
         """
         if annual:
             key = Stats.INCOME
-            main = income_statement_annual
+            main = INCOME_STATEMENT_ANNUAL
         else:
             key = Stats.INCOME_Q
-            main = income_statement_quarter
+            main = INCOME_STATEMENT_QUARTER
 
         return await self._get_fund(key, main, annual)
 
@@ -208,7 +211,7 @@ class Ticker:
         return self.__data[key]
 
     async def _get_fundamentals(self, main_part, annual=True) -> Dict:
-        url = fundamentals_url + self.__ticker + main_part
+        url = FUNDAMETALS_URL + self.__ticker + main_part
         now = datetime.now()
 
         if annual:
@@ -216,7 +219,7 @@ class Ticker:
         else:
             delta = timedelta(days=2 * 444)
 
-        url += fundamental_formatter.format(period1=round((now - delta).timestamp()), period2=round(now.timestamp()),
+        url += FUNDAMENTAL_FORMATTER.format(period1=round((now - delta).timestamp()), period2=round(now.timestamp()),
                                             symbol=self.__ticker)
 
         fundamental_json = await self._base_request(url, is_json=True)
@@ -248,30 +251,30 @@ class Ticker:
         ts_json = await self._request_timeseries(interval, range_)
         if ts_json['chart']['result'] is None:
             raise NameError(ts_json['chart']['error']['code'])
-        else:
-            reform_ts = {}
-            base_ts = ts_json['chart']['result'][0]
-            reform_ts['timestamp'] = base_ts['timestamp']
-            if 'events' in base_ts:
-                events = base_ts['events']
-                if 'dividends' in events:
-                    reform_ts['dividends'] = events['dividends']
-                if 'splits' in events:
-                    reform_ts['splits'] = events['splits']
-            data_ts = base_ts['indicators']
-            reform_ts = _merge_dicts([reform_ts, data_ts['quote'][0], data_ts['adjclose'][0]])
-            self.__data[Stats.TIME_SERIES] = reform_ts
+
+        reform_ts = {}
+        base_ts = ts_json['chart']['result'][0]
+        reform_ts['timestamp'] = base_ts['timestamp']
+        if 'events' in base_ts:
+            events = base_ts['events']
+            if 'dividends' in events:
+                reform_ts['dividends'] = events['dividends']
+            if 'splits' in events:
+                reform_ts['splits'] = events['splits']
+        data_ts = base_ts['indicators']
+        reform_ts = _merge_dicts([reform_ts, data_ts['quote'][0], data_ts['adjclose'][0]])
+        self.__data[Stats.TIME_SERIES] = reform_ts
 
     async def _request_timeseries(self, interval='1wk', range_: Union[str, timedelta] = '1y') -> Dict:
-        # TODO support for second query type: param1 & param2 date segment
+        # TODO support for second QUERY type: param1 & param2 date segment
         # TODO find out if other parameters are actually doing anything
         now = datetime.now()
         if isinstance(range_, str):
-            param1 = now - offsets[range_]
+            param1 = now - OFFSETS[range_]
         else:
             param1 = now - range_
 
-        url = f'{query}/{self.__ticker}?symbol={self.__ticker}&{query_opt}&interval={interval}&period1=' \
+        url = f'{QUERY}/{self.__ticker}?symbol={self.__ticker}&{QUERY_OPTIONAL}&interval={interval}&period1=' \
               f'{int(param1.timestamp())}&period2={int(now.timestamp())}' \
               f'&events=div|split|earn&useYfid=true&includePrePost=true'
         ts_json = await self._base_request(url, is_json=True)
@@ -285,7 +288,7 @@ class Ticker:
 
         return self.__data[Stats.PROFILE]
 
-    @symbol_check(funcs['profile'])
+    @symbol_check(FUNCS['profile'])
     async def _get_profile(self, *, souped):
 
         section = souped.find_all('section')[1]
@@ -298,7 +301,7 @@ class Ticker:
         }
 
     async def _make_request(self, func) -> AnyStr:
-        url = f'{base}/{self.__ticker}/{func}'
+        url = f'{BASE}/{self.__ticker}/{func}'
         html = await self._base_request(url)
         return html
 
@@ -350,10 +353,10 @@ class Tickers:
         try:
             index = self.order_hash[ticker]
             return self._tickers[index]
-        except KeyError:
-            raise KeyError(f'no such {ticker}')
+        except KeyError as e:
+            raise KeyError(f'no such {ticker}') from e
 
-    async def clear(self, key_arr: List[AnyStr] = None):
+    def clear(self, key_arr: List[AnyStr] = None):
         """
         clearing data dictionary inside every __ticker
         :param key_arr: array of keys to clean, if None clean every key
@@ -410,5 +413,5 @@ class Tickers:
                 del completed[ind]
 
             return completed, excepted_tickers
-        else:
-            return completed
+
+        return completed
