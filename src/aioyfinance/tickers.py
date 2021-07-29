@@ -321,6 +321,8 @@ class Ticker:
 
         if len(value) < 1:
             return value
+        if ',' in value:
+            value = value.replace(',', '')
 
         postfix = value[-1]
         main = value[:-1]
@@ -336,7 +338,7 @@ class Ticker:
             return None
 
         try:
-            timestamp = datetime.strptime(value, '%b %d, %Y').timestamp()
+            timestamp = datetime.strptime(value, '%b %d %Y').timestamp()
         except ValueError:
             pass
         else:
