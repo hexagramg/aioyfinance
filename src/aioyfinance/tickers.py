@@ -309,6 +309,50 @@ class Ticker:
     async def _base_request(url, is_json=False) -> Union[AnyStr, Dict]:
         return await BaseRequest.get(url, is_json)
 
+    def _parse_values(self, value: AnyStr) -> Union[None, AnyStr, float]:
+        """
+        values parsed from html table come in strings
+        this function parses each value and returns corresponding numerical value
+        :param value: second value from html table
+        :return: corrected value
+        """
+        if not value:
+            return value
+
+        if len(value) < 1:
+            return value
+
+        postfix = value[-1]
+        main = value[:-1]
+        if postfix == 'T':
+            return float(main) * 1000000000000
+        if postfix == 'B':
+            return float(main) * 1000000000
+        if postfix == 'M':
+            return float(main) * 1000000
+        if postfix == '%':
+            return float(main) / 100
+        if value == 'N/A':
+            return None
+
+        try:
+            timestamp = datetime.strptime(value, '%b %d, %Y').timestamp()
+        except ValueError:
+            pass
+        else:
+            return timestamp
+
+        try:
+            val = float(value)
+        except ValueError:
+            pass
+        else:
+            return val
+
+        return value
+
+
+
     def _parse_table(self, table) -> Dict:
         """
         method for parsing HTML table
@@ -317,7 +361,7 @@ class Ticker:
         for row in table.children:
             first, second = list(row.children)
             first = self._replace_keys(first.text)
-            dict_table[first] = second.text
+            dict_table[first] = self._parse_values(second.text)
 
         return dict_table
 
