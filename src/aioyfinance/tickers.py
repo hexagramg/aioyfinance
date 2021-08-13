@@ -1,7 +1,7 @@
 """
 Ticker and Tickers class declaration
 """
-
+# pylint: disable=line-too-long
 import asyncio
 import logging
 from datetime import datetime, timedelta
@@ -300,6 +300,11 @@ class Ticker:
             'Name': name
         }
 
+    async def get_statistics_with_profile(self):
+        profile = await self.get_profile()
+        stats = await self.get_statistics()
+        return _merge_dicts([profile, stats])
+
     async def _make_request(self, func) -> AnyStr:
         url = f'{BASE}/{self.__ticker}/{func}'
         html = await self._base_request(url)
@@ -428,6 +433,9 @@ class Tickers:
 
     async def get_income(self, annual=True):
         return await self._base_get('get_income', annual)
+
+    async def get_statistics_with_profile(self):
+        return await self._base_get('get_statistics_with_profile')
 
     async def _base_get(self, func: AnyStr, *args, **kwargs):
         """

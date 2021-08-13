@@ -4,6 +4,7 @@ file with long ass urls for fundamental jsons
 why the hell would they do them so long....
 
 """
+# pylint: disable=line-too-long
 FUNDAMETALS_URL = 'https://query1.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/'
 
 # dont forget
