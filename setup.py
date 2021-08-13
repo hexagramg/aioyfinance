@@ -9,7 +9,7 @@ long_description = (here / 'README.md').read_text(encoding='utf-8')
 setup(
     name='aioyfinance',  # Required
 
-    version='0.1.4',  # Required
+    version='0.1.5',  # Required
 
     description='Yahoo Finance asynchronous data downloader',  # Optional
 
