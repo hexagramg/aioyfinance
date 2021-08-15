@@ -445,29 +445,35 @@ class Tickers:
         coro_arr = [getattr(tick, func)(*args, **kwargs) for tick in self._tickers]
         return await self._get_tasks(coro_arr, func)
 
-    async def _get_tasks(self, coroutine_array: List[Coroutine], func: AnyStr) -> Union[Tuple[List[Dict], List[AnyStr]],
-                                                                          List[Union[Dict, BaseException]]]:
+    async def _get_tasks(self, coroutine_array: List[Coroutine], func: AnyStr) -> Union[Tuple[Dict, List[AnyStr]],
+                                                                          Dict]:
         """
         hopefully universal function. For it to work
         every async function in Task must raise NameError if anything goes wrong
         :param coroutine_array:
         :param func: name of the function to process
-        :return: array of completed data and array of tuples (quotes that catched exception, exception) or
-        array of data and exceptions mixed. See HANDLE_EXCEPTIONS variable
+        :return: dict (ticker -> value) of completed data and array of tuples (quotes that catched exception, exception)
+         or dict (ticker -> value) of data and exceptions mixed. See HANDLE_EXCEPTIONS variable
         """
         completed = await asyncio.gather(*coroutine_array, return_exceptions=True)
         if Config.internal.handle_exceptions:
             wrong_indexes = []
-            excepted_tickers: List[Tuple[AnyStr, BaseException]] = []
+            excepted_tickers = dict()
+            result = dict()
             for i, value in enumerate(completed):
                 if isinstance(value, Exception):
                     wrong_indexes.append(i)
-                    excepted_tickers.append((self._tickers_names[i], value))
+                    excepted_tickers[self._tickers_names[i]] = value
                     self.excepted_tickers.append((self._tickers_names[i], func, value))
+                else:
+                    result[self._tickers_names[i]] = value
+
             for ind in sorted(wrong_indexes, reverse=True):
                 del self._tickers_names[ind]
                 del self._tickers[ind]
-                del completed[ind]
-            return completed, excepted_tickers
-
-        return completed
+                #del completed[ind]
+            return result, excepted_tickers
+        result = {
+            self._tickers_names[i]: val for i, val in enumerate(completed)
+        }
+        return result

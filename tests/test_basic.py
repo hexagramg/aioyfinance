@@ -58,7 +58,7 @@ class MyTestCase(unittest.TestCase):
 
         tickers = yf.Tickers(['lolololololo'])
         r,w = loop.run_until_complete(tickers.get_income())
-        self.assertListEqual(w, ['lolololololo'])
+        self.assertTrue('lolololololo' in w)
 
 
     def test_mult_wrong(self):
@@ -121,13 +121,13 @@ class MyTestCase(unittest.TestCase):
 
         conf = yf.Config.create(handle_exceptions=False)
         both = loop.run_until_complete(tickers.get_income())
+        conf = yf.Config.create()
 
-        self.assertIsInstance(both, list)
+        self.assertIsInstance(both, dict)
         self.assertIsInstance(ri_wro, tuple)
         self.assertIsNotNone(ri_wro[1])
-        self.assertIsInstance(ri_wro[0][0], dict)
+        self.assertIsInstance(ri_wro[0]['aapl'], dict)
 
-        conf = yf.Config.create()
 
     def test_stat(self):
         tickers = yf.Tickers(['aapl', 'nvda', 'alle'])

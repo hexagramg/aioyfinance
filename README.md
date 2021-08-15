@@ -64,7 +64,8 @@ async def quick():
     tickers = yf.Tickers(tickers_names)
     
     # doing any task will return 2 values,
-    # list of results and list of tickers that catched exceptions
+    # dict (ticker -> value) of results and
+    # dict (ticker -> exception) of tickers that catched exceptions
     # unless variable HANDLE_EXCEPTION is set to False
     ts, excepted = await tickers.get_timeseries('1d', '6mo')
     data, _ = await tickers.get_statistics()
@@ -101,7 +102,7 @@ async def params():
         min_rand_delay=0.01,
         
         handle_exceptions=True # this variable alters tickers return behaviour. 
-        # setting it to False  results in Tickers returning single list of Union[dict, BaseException]
+        # setting it to False  results in Tickers returning single dict of Union[dict, BaseException]
         # by default it is True and tuple(Results, TickersThatCaughtExceptions) is returned
         # and tickers that caught exceptions are cleared from tickers object
     )
