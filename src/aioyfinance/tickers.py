@@ -452,7 +452,7 @@ class Tickers:
         every async function in Task must raise NameError if anything goes wrong
         :param coroutine_array:
         :param func: name of the function to process
-        :return: dict (ticker -> value) of completed data and array of tuples (quotes that catched exception, exception)
+        :return: dict (ticker -> value) of completed data and dict (ticker -> repr(exception)
          or dict (ticker -> value) of data and exceptions mixed. See HANDLE_EXCEPTIONS variable
         """
         completed = await asyncio.gather(*coroutine_array, return_exceptions=True)
@@ -463,7 +463,8 @@ class Tickers:
             for i, value in enumerate(completed):
                 if isinstance(value, Exception):
                     wrong_indexes.append(i)
-                    excepted_tickers[self._tickers_names[i]] = value
+                    excepted_tickers[self._tickers_names[i]] = repr(value) # making exceptions json serializable by
+                    #converting them to string
                     self.excepted_tickers.append((self._tickers_names[i], func, value))
                 else:
                     result[self._tickers_names[i]] = value
