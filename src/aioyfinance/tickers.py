@@ -339,6 +339,8 @@ class Ticker:
             return float(main) * 1000000
         if postfix == '%':
             return float(main) / 100
+        if postfix == 'k':
+            return float(main) * 1000
         if value == 'N/A':
             return None
 
