@@ -467,7 +467,7 @@ class Tickers:
                     wrong_indexes.append(i)
                     excepted_tickers[self._tickers_names[i]] = repr(value) # making exceptions json serializable by
                     #converting them to string
-                    self.excepted_tickers.append((self._tickers_names[i], func, value))
+                    self.excepted_tickers.append((self._tickers_names[i], func, repr(value)))
                 else:
                     result[self._tickers_names[i]] = value
 
